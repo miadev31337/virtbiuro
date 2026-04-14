@@ -570,3 +570,35 @@ input[type=number] {
   font-weight: 600;
   color: var(--text-secondary);
 }
+
+/* ================== Zakończone Umowy ================== */
+.inline-status-select {
+  padding: 0.4rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  outline: none;
+  font-weight: 600;
+  cursor: pointer;
+  background-color: var(--bg-color);
+  transition: all 0.2s;
+}
+
+.inline-status-select.aktywny {
+  color: var(--danger-color);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.inline-status-select.nie {
+  color: var(--success-color);
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.kara-text {
+  color: var(--danger-color);
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-top: 0.3rem;
+}
+

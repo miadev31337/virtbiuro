@@ -18,7 +18,7 @@ import {
   createUserWithEmailAndPassword,
   signOut
 } from 'firebase/auth';
-import { Plus, XCircle, LogOut, Pencil, RefreshCw, ArrowRight } from 'lucide-react';
+import { Plus, XCircle, LogOut } from 'lucide-react';
 import './index.css';
 
 // Инициализация Firebase
@@ -58,10 +58,8 @@ function App() {
   // Modals state
   const [confirmOkContractId, setConfirmOkContractId] = useState(null);
   const [confirmUncheckContractId, setConfirmUncheckContractId] = useState(null);
-  const [confirmDeleteContractId, setConfirmDeleteContractId] = useState(null);
   const [extendContractId, setExtendContractId] = useState(null);
   const [extendMonths, setExtendMonths] = useState(12);
-  const [editingContract, setEditingContract] = useState(null);
 
   // Filters state
   const [filterAdded, setFilterAdded] = useState('');
@@ -154,54 +152,6 @@ function App() {
     setShowAddModal(true);
   };
 
-  const saveEditContract = async (e) => {
-    e.preventDefault();
-    if (!editingContract || !editingContract.id) return;
-    try {
-      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'contracts', editingContract.id);
-      
-      let calculatedDateEnd = null;
-      const baseDate = editingContract.dataRozpoczecia || editingContract.dateStart;
-      if (baseDate) {
-        const d = new Date(baseDate);
-        d.setMonth(d.getMonth() + Number(editingContract.okresNajmu || 12));
-        calculatedDateEnd = d.toISOString().split('T')[0];
-      }
-
-      const payload = {
-        client: editingContract.nazwa || editingContract.client,
-        nazwa: editingContract.nazwa || editingContract.client,
-        nip: editingContract.nip || '',
-        numerBiura: editingContract.numerBiura || '',
-        okresNajmu: Number(editingContract.okresNajmu || 12),
-        kwota: Number(editingContract.kwota !== undefined && editingContract.kwota !== null ? editingContract.kwota : (editingContract.value || 0)),
-        value: Number(editingContract.kwota !== undefined && editingContract.kwota !== null ? editingContract.kwota : (editingContract.value || 0)),
-        dataRozpoczecia: baseDate,
-        dateStart: baseDate,
-        dateEnd: calculatedDateEnd,
-        createdBy: user.email
-      };
-
-      if (editingContract.dateEndExtended) {
-        const extD = new Date(calculatedDateEnd);
-        const extMonths = Number(editingContract.extendMonthsEdit || 12);
-        extD.setMonth(extD.getMonth() + extMonths);
-        payload.dateEndExtended = extD.toISOString().split('T')[0];
-        payload.extendPeriod = extMonths;
-      }
-
-      await updateDoc(docRef, payload);
-      setEditingContract(null);
-    } catch (err) { console.error(err); }
-  };
-
-  const handleOpenEdit = (c) => {
-    setEditingContract({
-      ...c,
-      extendMonthsEdit: c.extendPeriod || 12
-    });
-  };
-
   const addContract = async (e) => {
     e.preventDefault();
     if (!newContract.nazwa) return;
@@ -246,14 +196,6 @@ function App() {
     try {
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'contracts', id);
       await deleteDoc(docRef);
-      setConfirmDeleteContractId(null);
-    } catch (err) { console.error(err); }
-  };
-
-  const updateStatusKRS = async (id, newStatus) => {
-    try {
-      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'contracts', id);
-      await updateDoc(docRef, { statusKRS: newStatus });
     } catch (err) { console.error(err); }
   };
 
@@ -266,8 +208,8 @@ function App() {
     
     try {
       let newDateEnd = null;
-      // Строго берём оригинальную дату завершения (Koniec)
-      const baseDateString = contract.dateEnd || contract.dataRozpoczecia || contract.dateStart;
+      // Если у нас уже было продление, берем dateEndExtended, если нет - берем dateEnd.
+      const baseDateString = contract.dateEndExtended || contract.dateEnd || contract.dataRozpoczecia || contract.dateStart;
       
       if (baseDateString) {
         const dateObj = new Date(baseDateString);
@@ -284,8 +226,6 @@ function App() {
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'contracts', extendContractId);
       await updateDoc(docRef, { 
         dateEndExtended: newDateEnd,
-        okresNajmu: extendMonths, // Обновляем выбранный период в таблице
-        kwota: extendMonths * 50,
         oplata: { done: false, checkedBy: null }
       });
       
@@ -309,24 +249,9 @@ function App() {
 
   const filteredData = useMemo(() => {
     const data = contracts.filter(c => {
-      let computedSheet = c.sheet;
-      if (computedSheet === 'NOWE UMOWY') computedSheet = SHEETS.NEW;
-      
-      // Автоматический перенос в ZAKOŃCZONE UMOWY
-      if (computedSheet === SHEETS.NEW || computedSheet === 'BIEŻĄCE UMOWY') {
-        const actualKoniec = c.dateEndExtended || c.dateEnd;
-        if (actualKoniec) {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const endDate = new Date(actualKoniec);
-          endDate.setHours(0, 0, 0, 0);
-          if (endDate < today) {
-            computedSheet = SHEETS.EXPIRED;
-          }
-        }
-      }
-
-      if (computedSheet !== activeTab) return false;
+      // Поддержка старых записей "NOWE UMOWY" для вкладки "BIEŻĄCE UMOWY"
+      const isValidSheet = (activeTab === SHEETS.NEW && c.sheet === 'NOWE UMOWY') || c.sheet === activeTab;
+      if (!isValidSheet) return false;
 
       // Filter Payment
       if (filterPayment === 'TAK' && !c.oplata?.done) return false;
@@ -511,173 +436,71 @@ function App() {
       <div className="table-container">
         <table className="data-table">
           <thead>
-            {activeTab === SHEETS.EXPIRED ? (
-              <tr>
-                <th>Klient</th>
-                <th>Koniec</th>
-                <th>Status w KRS / CEIDG</th>
-                <th>Data wykreślenia</th>
-                <th>Po terminie</th>
-                <th style={{textAlign: 'right'}}>Akcje</th>
-              </tr>
-            ) : (
-              <tr>
-                <th>Klient</th>
-                <th>Daty</th>
-                {activeTab !== SHEETS.EXPIRED && <th>Manager</th>}
-                <th style={{textAlign: 'right'}}>Kwota</th>
-                {activeTab !== SHEETS.PENDING && <th style={{textAlign: 'center'}}>Opłata</th>}
-                <th style={{textAlign: 'right'}}>Akcje</th>
-              </tr>
-            )}
+            <tr>
+              <th>Klient</th>
+              <th>Daty</th>
+              {activeTab !== SHEETS.EXPIRED && <th>Manager</th>}
+              <th style={{textAlign: 'right'}}>Kwota</th>
+              {activeTab !== SHEETS.PENDING && <th style={{textAlign: 'center'}}>Opłata</th>}
+              <th style={{textAlign: 'right'}}>Akcje</th>
+            </tr>
           </thead>
           <tbody>
-            {currentData.map(c => {
-              if (activeTab === SHEETS.EXPIRED) {
-                const actualKoniec = c.dateEndExtended || c.dateEnd;
-                let dataWykreslenia = '-';
-                let daysOverdue = 0;
+            {currentData.map(c => (
+              <tr key={c.id}>
+                <td className="cell-client">
+                  <div style={{fontWeight: 800, marginBottom: '0.3rem'}}>{c.nazwa || c.client || '-'}</div>
+                  {c.nip && <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}><span style={{color: 'var(--text-primary)', fontWeight: 700}}>NIP:</span> {c.nip}</div>}
+                  {c.numerBiura && <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}><span style={{color: 'var(--text-primary)', fontWeight: 700}}>Biuro:</span> {c.numerBiura}</div>}
+                </td>
+                <td className="cell-dates">
+                  {c.okresNajmu && <div style={{fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.3rem'}}>Okres: {c.okresNajmu} miesięcy</div>}
+                  {(c.dataRozpoczecia || c.dateStart) && <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}><span style={{color: 'var(--text-primary)', fontWeight: 700}}>Start:</span> {c.dataRozpoczecia || c.dateStart}</div>}
+                  {c.dateEnd && <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}><span style={{color: 'var(--text-primary)', fontWeight: 700}}>Koniec:</span> {c.dateEnd}</div>}
+                  {c.dateEndExtended && <div style={{fontSize: '0.85rem', color: 'var(--danger-color)', fontWeight: 700, marginTop: '0.2rem'}}>Przedłużona do: {c.dateEndExtended}</div>}
+                </td>
+                {activeTab !== SHEETS.EXPIRED && (
+                  <td style={{fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500}}>
+                    {c.createdBy || '-'}
+                  </td>
+                )}
+                <td className="cell-value">{(c.kwota || c.value || 0).toLocaleString()} PLN</td>
                 
-                if (actualKoniec) {
-                  const dObj = new Date(actualKoniec);
-                  dObj.setDate(dObj.getDate() + 30);
-                  dataWykreslenia = dObj.toISOString().split('T')[0];
-
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  const wykrObj = new Date(dataWykreslenia);
-                  wykrObj.setHours(0, 0, 0, 0);
-                  
-                  daysOverdue = Math.floor((today.getTime() - wykrObj.getTime()) / (1000 * 3600 * 24));
-                }
-
-                const currentKRS = c.statusKRS || 'Aktywny';
-                const showKara = daysOverdue > 0 && currentKRS === 'Aktywny';
-
-                return (
-                  <tr key={c.id}>
-                    <td className="cell-client">
-                      <div style={{fontWeight: 800, marginBottom: '0.3rem'}}>{c.nazwa || c.client || '-'}</div>
-                      {c.nip && <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}><span style={{color: 'var(--text-primary)', fontWeight: 700}}>NIP:</span> {c.nip}</div>}
-                      {c.numerBiura && <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}><span style={{color: 'var(--text-primary)', fontWeight: 700}}>Biuro:</span> {c.numerBiura}</div>}
-                    </td>
-
-                    <td className="cell-dates">
-                      <div style={{fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500}}>
-                        {actualKoniec || '-'}
-                      </div>
-                    </td>
-
-                    <td>
-                      <select 
-                        className={`inline-status-select ${currentKRS.toLowerCase()}`}
-                        value={currentKRS}
-                        onChange={(e) => updateStatusKRS(c.id, e.target.value)}
-                      >
-                        <option value="Aktywny">Aktywny</option>
-                        <option value="Nie">Nie</option>
-                      </select>
-                    </td>
-
-                    <td className="cell-dates">
-                      <div style={{fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500}}>
-                        {dataWykreslenia}
-                      </div>
-                    </td>
-
-                    <td className="cell-dates">
-                      {daysOverdue > 0 ? (
-                        <>
-                          <div style={{fontSize: '0.85rem', fontWeight: 600, color: 'var(--danger-color)'}}>{daysOverdue} {daysOverdue === 1 ? 'dzień' : 'dni'}</div>
-                          {showKara && (
-                            <div className="kara-text">Kara: {daysOverdue * 500} PLN</div>
-                          )}
-                        </>
-                      ) : (
-                        <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}>-</div>
-                      )}
-                    </td>
-
-                    <td style={{verticalAlign: 'middle'}}>
-                      <div className="cell-actions-inner">
-                        <button onClick={() => setExtendContractId(c.id)} className="btn-icon" title="Przedłuż" style={{ color: '#4f46e5' }}>
-                          <RefreshCw size={20} />
-                        </button>
-                        <button onClick={() => handleOpenEdit(c)} className="btn-icon" title="Edytuj" style={{ color: 'var(--primary-color)' }}>
-                          <Pencil size={20} />
-                        </button>
-                        <button onClick={() => setConfirmDeleteContractId(c.id)} className="btn-icon" title="Usuń" style={{ color: 'var(--danger-color)' }}>
-                          <XCircle size={20} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              }
-
-              return (
-                <tr key={c.id}>
-                  <td className="cell-client">
-                    <div style={{fontWeight: 800, marginBottom: '0.3rem'}}>{c.nazwa || c.client || '-'}</div>
-                    {c.nip && <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}><span style={{color: 'var(--text-primary)', fontWeight: 700}}>NIP:</span> {c.nip}</div>}
-                    {c.numerBiura && <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}><span style={{color: 'var(--text-primary)', fontWeight: 700}}>Biuro:</span> {c.numerBiura}</div>}
-                  </td>
-                  <td className="cell-dates">
-                    {c.okresNajmu && <div style={{fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.3rem'}}>Okres: {c.okresNajmu} mies.</div>}
-                    {(c.dataRozpoczecia || c.dateStart) && <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}><span style={{color: 'var(--text-primary)', fontWeight: 700}}>Start:</span> {c.dataRozpoczecia || c.dateStart}</div>}
-                    {c.dateEnd && <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}><span style={{color: 'var(--text-primary)', fontWeight: 700}}>Koniec:</span> {c.dateEnd}</div>}
-                    {c.dateEndExtended && <div style={{fontSize: '0.85rem', color: 'var(--danger-color)', fontWeight: 700, marginTop: '0.2rem'}}>Przedłużona do: {c.dateEndExtended}</div>}
-                  </td>
-                  {activeTab !== SHEETS.EXPIRED && (
-                    <td style={{fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500}}>
-                      {c.createdBy || '-'}
-                    </td>
-                  )}
-                  <td className="cell-value">{(c.kwota !== undefined && c.kwota !== null ? c.kwota : (c.value || 0)).toLocaleString()} PLN</td>
-                  
-                  {/* Opłata */}
-                  {activeTab !== SHEETS.PENDING && (
-                    <td style={{textAlign: 'center', verticalAlign: 'middle'}}>
-                      <div title={c.oplata?.checkedBy ? `Oznaczono przez: ${c.oplata.checkedBy}` : ''}>
-                        <input 
-                          type="checkbox" 
-                          checked={!!c.oplata?.done} 
-                          onChange={() => {
-                            if (c.oplata?.done) {
-                              setConfirmUncheckContractId(c.id);
-                            } else {
-                              toggleOplata(c.id, false);
-                            }
-                          }}
-                          style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--primary-color)' }}
-                        />
-                      </div>
-                    </td>
-                  )}
-
-                  <td style={{verticalAlign: 'middle'}}>
-                    <div className="cell-actions-inner">
-                      {activeTab === SHEETS.PENDING && (
-                        <button onClick={() => setConfirmOkContractId(c.id)} className="btn-icon" title="Akceptuj" style={{ color: 'var(--success-color)' }}>
-                          <ArrowRight size={20} />
-                        </button>
-                      )}
-                      {activeTab === SHEETS.NEW && (
-                        <button onClick={() => setExtendContractId(c.id)} className="btn-icon" title="Przedłuż" style={{ color: '#4f46e5' }}>
-                          <RefreshCw size={20} />
-                        </button>
-                      )}
-                      <button onClick={() => handleOpenEdit(c)} className="btn-icon" title="Edytuj" style={{ color: 'var(--primary-color)' }}>
-                        <Pencil size={20} />
-                      </button>
-                      <button onClick={() => setConfirmDeleteContractId(c.id)} className="btn-icon" title="Usuń" style={{ color: 'var(--danger-color)' }}>
-                        <XCircle size={20} />
-                      </button>
+                {/* Opłata */}
+                {activeTab !== SHEETS.PENDING && (
+                  <td style={{textAlign: 'center', verticalAlign: 'middle'}}>
+                    <div title={c.oplata?.checkedBy ? `Oznaczono przez: ${c.oplata.checkedBy}` : ''}>
+                      <input 
+                        type="checkbox" 
+                        checked={!!c.oplata?.done} 
+                        onChange={() => {
+                          if (c.oplata?.done) {
+                            setConfirmUncheckContractId(c.id);
+                          } else {
+                            toggleOplata(c.id, false);
+                          }
+                        }}
+                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--primary-color)' }}
+                      />
                     </div>
                   </td>
-                </tr>
-              );
-            })}
+                )}
+
+                <td style={{verticalAlign: 'middle'}}>
+                  <div className="cell-actions-inner">
+                    {activeTab === SHEETS.PENDING && (
+                      <button onClick={() => setConfirmOkContractId(c.id)} className="btn-action success">OK</button>
+                    )}
+                    {activeTab === SHEETS.NEW && (
+                      <button onClick={() => setExtendContractId(c.id)} className="btn-action indigo">Przedłuż</button>
+                    )}
+                    <button onClick={() => deleteContract(c.id)} className="btn-icon" title="Usuń">
+                      <XCircle size={20} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
         {filteredData.length === 0 && (
@@ -706,127 +529,6 @@ function App() {
           </button>
         </div>
       )}
-
-      {editingContract && (() => {
-        let previewDateEnd = null;
-        if (editingContract.dataRozpoczecia || editingContract.dateStart) {
-          const d = new Date(editingContract.dataRozpoczecia || editingContract.dateStart);
-          d.setMonth(d.getMonth() + Number(editingContract.okresNajmu || 12));
-          previewDateEnd = d.toISOString().split('T')[0];
-        }
-
-        let previewDateExtended = null;
-        if (editingContract.dateEndExtended && previewDateEnd) {
-          const extD = new Date(previewDateEnd);
-          extD.setMonth(extD.getMonth() + Number(editingContract.extendMonthsEdit || 12));
-          previewDateExtended = extD.toISOString().split('T')[0];
-        }
-
-        return (
-          <div className="modal-overlay">
-            <form onSubmit={saveEditContract} className="modal-card">
-              <h2 className="modal-title">Edytuj umowę</h2>
-              <input 
-                required 
-                className="input-field" 
-                placeholder="Nazwa" 
-                value={editingContract.nazwa || editingContract.client || ''} 
-                onChange={e => setEditingContract({ ...editingContract, nazwa: e.target.value })} 
-              />
-              <input 
-                type="number" 
-                className="input-field" 
-                placeholder="NIP" 
-                value={editingContract.nip || ''} 
-                onChange={e => setEditingContract({ ...editingContract, nip: e.target.value })} 
-              />
-              <input 
-                required 
-                className="input-field" 
-                placeholder="Numer biura" 
-                value={editingContract.numerBiura || ''} 
-                onChange={e => setEditingContract({ ...editingContract, numerBiura: e.target.value })} 
-              />
-              
-              <div style={{ marginBottom: '0.5rem' }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Data rozpoczęcia:</label>
-                <input 
-                  required 
-                  type="date" 
-                  className="input-field" 
-                  value={editingContract.dataRozpoczecia || editingContract.dateStart || ''} 
-                  onChange={e => setEditingContract({ ...editingContract, dataRozpoczecia: e.target.value, dateStart: e.target.value })} 
-                  title="Data rozpoczęcia"
-                />
-              </div>
-              
-              <div style={{ marginBottom: '0.5rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Okres najmu:</label>
-                  <select
-                    className="input-field"
-                    style={{ width: '120px', margin: 0 }}
-                    value={editingContract.okresNajmu || 12}
-                    onChange={e => {
-                      const val = Number(e.target.value);
-                      setEditingContract({ ...editingContract, okresNajmu: val, kwota: val * 50 });
-                    }}
-                  >
-                    {[6, 7, 8, 9, 10, 11, 12].map(m => (
-                      <option key={m} value={m}>{m} mies.</option>
-                    ))}
-                  </select>
-                </div>
-                {previewDateEnd && (
-                  <div style={{ flex: 1, fontSize: '0.85rem', color: 'var(--primary-color)', fontWeight: 600 }}>
-                    Koniec: {previewDateEnd}
-                  </div>
-                )}
-              </div>
-
-              {editingContract.dateEndExtended && (
-                <div style={{ marginBottom: '0.5rem', display: 'flex', gap: '1rem', alignItems: 'center', backgroundColor: '#fef2f2', padding: '0.75rem', borderRadius: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <label style={{ fontSize: '0.8rem', color: 'var(--danger-color)', whiteSpace: 'nowrap' }}>Przedłużenie:</label>
-                    <select
-                      className="input-field"
-                      style={{ borderColor: 'var(--danger-color)', width: '120px', margin: 0 }}
-                      value={editingContract.extendMonthsEdit || 12}
-                      onChange={e => setEditingContract({ ...editingContract, extendMonthsEdit: Number(e.target.value) })}
-                    >
-                      {[6, 7, 8, 9, 10, 11, 12].map(m => (
-                        <option key={m} value={m}>{m} mies.</option>
-                      ))}
-                    </select>
-                  </div>
-                  {previewDateExtended && (
-                    <div style={{ flex: 1, fontSize: '0.85rem', color: 'var(--danger-color)', fontWeight: 600 }}>
-                      Przedłużona do: {previewDateExtended}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="input-with-currency">
-                <input 
-                  required 
-                  type="number" 
-                  className="input-field" 
-                  placeholder="Kwota" 
-                  value={editingContract.kwota !== undefined && editingContract.kwota !== null ? editingContract.kwota : (editingContract.value || '')} 
-                  onChange={e => setEditingContract({ ...editingContract, kwota: e.target.value })} 
-                />
-                <span className="currency-symbol">PLN</span>
-              </div>
-              
-              <div className="modal-actions">
-                <button type="button" onClick={() => setEditingContract(null)} className="btn-secondary">Odrzuć</button>
-                <button type="submit" className="btn-primary">Zapisz</button>
-              </div>
-            </form>
-          </div>
-        );
-      })()}
 
       {showAddModal && (
         <div className="modal-overlay">
@@ -863,7 +565,7 @@ function App() {
               }}
             >
               {[6, 7, 8, 9, 10, 11, 12].map(m => (
-                <option key={m} value={m}>Okres najmu: {m} mies.</option>
+                <option key={m} value={m}>Okres najmu: {m} miesięcy</option>
               ))}
             </select>
             
@@ -929,19 +631,13 @@ function App() {
             <h2 className="modal-title" style={{ fontSize: '1.25rem', marginBottom: '0' }}>Okres przedłużenia umowy na:</h2>
             <select
               className="input-field"
-              style={{ width: '100%', marginBottom: '1rem' }}
               value={extendMonths}
               onChange={e => setExtendMonths(Number(e.target.value))}
             >
               {[6, 7, 8, 9, 10, 11, 12].map(m => (
-                <option key={m} value={m}>{m} mies.</option>
+                <option key={m} value={m}>{m} miesięcy</option>
               ))}
             </select>
-            
-            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', textAlign: 'center' }}>
-              Kwota płatności: <span style={{ fontWeight: 800, color: 'var(--primary-color)' }}>{extendMonths * 50} PLN</span>
-            </div>
-
             <div style={{ display: 'flex', gap: '1rem', width: '100%', marginTop: '1rem' }}>
               <button onClick={() => { setExtendContractId(null); setExtendMonths(12); }} className="btn-secondary" style={{ flex: 1 }}>Odrzuć</button>
               <button onClick={handleExtend} className="btn-primary" style={{ flex: 1 }}>Zapisz</button>
@@ -967,30 +663,6 @@ function App() {
                   toggleOplata(confirmUncheckContractId, true); // true = был включен, теперь выключаем
                   setConfirmUncheckContractId(null);
                 }} 
-                className="btn-primary" 
-                style={{ flex: 1, backgroundColor: 'var(--danger-color)' }}>
-                TAK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Confirm Delete Modal */}
-      {confirmDeleteContractId && (
-        <div className="modal-overlay">
-          <div className="modal-card" style={{ maxWidth: '400px', textAlign: 'center' }}>
-            <h2 className="modal-title" style={{ marginBottom: '1.5rem', fontSize: '1.25rem', color: 'var(--danger-color)' }}>Usuń umowę</h2>
-            <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary)' }}>Czy na pewno chcesz bezpowrotnie usunąć tę umowę?</p>
-            <div style={{ display: 'flex', gap: '1rem', width: '100%' }}>
-              <button 
-                onClick={() => setConfirmDeleteContractId(null)} 
-                className="btn-secondary" 
-                style={{ flex: 1 }}>
-                NIE
-              </button>
-              <button 
-                onClick={() => deleteContract(confirmDeleteContractId)} 
                 className="btn-primary" 
                 style={{ flex: 1, backgroundColor: 'var(--danger-color)' }}>
                 TAK
