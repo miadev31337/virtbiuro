@@ -1,30 +1,30 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { initializeApp } from 'firebase/app';
-import { 
-  getFirestore, 
-  collection, 
-  doc, 
-  onSnapshot, 
-  updateDoc, 
-  deleteDoc, 
+import {
+  getFirestore,
+  collection,
+  doc,
+  onSnapshot,
+  updateDoc,
+  deleteDoc,
   addDoc,
-  serverTimestamp 
+  serverTimestamp
 } from 'firebase/firestore';
-import { 
-  getAuth, 
+import {
+  getAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
-  signInWithCustomToken 
+  signInWithCustomToken
 } from 'firebase/auth';
-import { 
-  Plus, 
-  CheckCircle, 
-  XCircle, 
-  RefreshCcw, 
-  Clock, 
+import {
+  Plus,
+  CheckCircle,
+  XCircle,
+  RefreshCcw,
+  Clock,
   ArrowRightLeft,
   Calendar,
   User,
@@ -41,12 +41,12 @@ import {
 // Инициализация Firebase
 // Вставьте ваши данные из Firebase Console ниже:
 const firebaseConfig = {
-  apiKey: "ВАШ_API_KEY",
-  authDomain: "ВАШ_PROJECT_ID.firebaseapp.com",
-  projectId: "ВАШ_PROJECT_ID",
-  storageBucket: "ВАШ_PROJECT_ID.firebasestorage.app",
-  messagingSenderId: "ВАШ_SENDER_ID",
-  appId: "ВАШ_APP_ID"
+  apiKey: "AIzaSyAwNxGthn9TaBbiZITH58Zin4X8wsEyaog",
+  authDomain: "mycontractsystem.firebaseapp.com",
+  projectId: "mycontractsystem",
+  storageBucket: "mycontractsystem.firebasestorage.app",
+  messagingSenderId: "742798632730",
+  appId: "1:742798632730:web:012d17b9e9804ffcb3eea3"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -66,7 +66,7 @@ function App() {
   const [contracts, setContracts] = useState([]);
   const [activeTab, setActiveTab] = useState(SHEETS.NEW);
   const [loading, setLoading] = useState(true);
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
@@ -91,12 +91,12 @@ function App() {
     setLoading(true);
 
     const contractsCol = collection(db, 'artifacts', appId, 'public', 'data', 'contracts');
-    const unsubscribe = onSnapshot(contractsCol, 
+    const unsubscribe = onSnapshot(contractsCol,
       (snapshot) => {
         const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setContracts(docs);
         setLoading(false);
-      }, 
+      },
       (error) => {
         console.error("Firestore error:", error);
         setLoading(false);
@@ -228,9 +228,9 @@ function App() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
           <form onSubmit={addContract} className="bg-white p-8 rounded-3xl w-full max-w-md space-y-4">
             <h2 className="text-xl font-bold">Новый договор</h2>
-            <input required className="w-full p-3 border rounded-xl" placeholder="Клиент" value={newContract.client} onChange={e => setNewContract({...newContract, client: e.target.value})} />
-            <input required type="number" className="w-full p-3 border rounded-xl" placeholder="Сумма" value={newContract.value} onChange={e => setNewContract({...newContract, value: e.target.value})} />
-            <input type="date" className="w-full p-3 border rounded-xl" value={newContract.dateEnd} onChange={e => setNewContract({...newContract, dateEnd: e.target.value})} />
+            <input required className="w-full p-3 border rounded-xl" placeholder="Клиент" value={newContract.client} onChange={e => setNewContract({ ...newContract, client: e.target.value })} />
+            <input required type="number" className="w-full p-3 border rounded-xl" placeholder="Сумма" value={newContract.value} onChange={e => setNewContract({ ...newContract, value: e.target.value })} />
+            <input type="date" className="w-full p-3 border rounded-xl" value={newContract.dateEnd} onChange={e => setNewContract({ ...newContract, dateEnd: e.target.value })} />
             <div className="flex gap-2">
               <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 text-slate-400">Отмена</button>
               <button type="submit" className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold">Создать</button>
