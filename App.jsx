@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { initializeApp } from 'firebase/app';
 import {
@@ -18,7 +18,8 @@ import {
   createUserWithEmailAndPassword,
   signOut
 } from 'firebase/auth';
-import { Plus, XCircle, LogOut, Pencil, RefreshCw, ArrowRight } from 'lucide-react';
+import { Plus, XCircle, LogOut, Pencil, RefreshCw, ArrowRight, Upload } from 'lucide-react';
+import Papa from 'papaparse';
 import './index.css';
 
 // Инициализация Firebase
@@ -165,6 +166,7 @@ function App() {
       if (baseDate) {
         const d = new Date(baseDate);
         d.setMonth(d.getMonth() + Number(editingContract.okresNajmu || 12));
+        d.setDate(d.getDate() - 1);
         calculatedDateEnd = d.toISOString().split('T')[0];
       }
 
@@ -212,6 +214,7 @@ function App() {
       if (newContract.dataRozpoczecia) {
         const d = new Date(newContract.dataRozpoczecia);
         d.setMonth(d.getMonth() + Number(newContract.okresNajmu));
+        d.setDate(d.getDate() - 1);
         calculatedDateEnd = d.toISOString().split('T')[0];
       }
 
@@ -386,6 +389,79 @@ function App() {
     setFilterExtended('');
   };
 
+  const fileInputRef = useRef(null);
+
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        const rows = results.data;
+        const contractsCol = collection(db, 'artifacts', appId, 'public', 'data', 'contracts');
+        
+        let importedCount = 0;
+
+        for (const row of rows) {
+          try {
+            const nazwa = row['Nazwa']?.trim();
+            const nip = row['NIP']?.trim() || '';
+            const start = row['Start']?.trim();
+            const koniec = row['Koniec']?.trim();
+            const biuro = row['Biuro']?.trim() || '';
+            const krs = row['KRS']?.trim() || 'Aktywny';
+
+            if (!nazwa || !start || !koniec) {
+              console.warn('Пропуск строки: нет необходимых полей (Nazwa, Start, Koniec)', row);
+              continue;
+            }
+
+            // Вычисляем Okres
+            const startDate = new Date(start);
+            const endDate = new Date(koniec);
+            let diffMonths = (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth());
+            
+            // Если дни различаются, корректируем периоды (или проще просто взять разницу месяцев)
+            if (diffMonths <= 0) diffMonths = 1;
+
+            const okresNajmu = Number(diffMonths);
+            const kwota = okresNajmu * 50;
+
+            await addDoc(contractsCol, {
+              client: nazwa,
+              nazwa: nazwa,
+              nip: nip,
+              numerBiura: biuro,
+              okresNajmu: okresNajmu,
+              kwota: kwota,
+              value: kwota, // backward compatibility
+              dataRozpoczecia: start,
+              dateStart: start,
+              dateEnd: koniec,
+              statusKRS: krs,
+              sheet: 'BIEŻĄCE UMOWY',
+              createdBy: 'Import',
+              createdAt: serverTimestamp(),
+              oplata: { done: false, checkedBy: null }
+            });
+            importedCount++;
+          } catch (err) {
+            console.error('Ошибка импорта строки', row, err);
+          }
+        }
+        
+        alert(`Импорт завершен! Успешно загружено ${importedCount} договоров.`);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      },
+      error: (error) => {
+        console.error('Ошибка парсинга CSV:', error);
+        alert('Ошибка при чтении файла. Убедитесь, что это корректный CSV.');
+      }
+    });
+  };
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 50;
@@ -446,6 +522,18 @@ function App() {
           <button onClick={handleLogout} className="btn-logout" title="Wyloguj">
             {window.innerWidth > 600 ? 'Wyloguj' : <LogOut size={18} />}
           </button>
+          
+          <input 
+            type="file" 
+            accept=".csv" 
+            ref={fileInputRef} 
+            onChange={handleFileUpload} 
+            style={{ display: 'none' }} 
+          />
+          <button onClick={() => fileInputRef.current?.click()} className="btn-import" title="Import CSV">
+            <Upload size={18} /> {window.innerWidth > 600 ? 'Import' : ''}
+          </button>
+
           <button onClick={openAddModal} className="btn-add">
             <Plus size={18} /> {window.innerWidth > 600 ? 'Dodaj' : ''}
           </button>
@@ -586,12 +674,10 @@ function App() {
                     </td>
 
                     <td className="cell-dates">
-                      {daysOverdue > 0 ? (
+                      {showKara ? (
                         <>
                           <div style={{fontSize: '0.85rem', fontWeight: 600, color: 'var(--danger-color)'}}>{daysOverdue} {daysOverdue === 1 ? 'dzień' : 'dni'}</div>
-                          {showKara && (
-                            <div className="kara-text">Kara: {daysOverdue * 500} PLN</div>
-                          )}
+                          <div className="kara-text">Kara: {daysOverdue * 500} PLN</div>
                         </>
                       ) : (
                         <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}>-</div>
@@ -712,6 +798,7 @@ function App() {
         if (editingContract.dataRozpoczecia || editingContract.dateStart) {
           const d = new Date(editingContract.dataRozpoczecia || editingContract.dateStart);
           d.setMonth(d.getMonth() + Number(editingContract.okresNajmu || 12));
+          d.setDate(d.getDate() - 1);
           previewDateEnd = d.toISOString().split('T')[0];
         }
 

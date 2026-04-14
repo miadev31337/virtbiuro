@@ -602,3 +602,22 @@ input[type=number] {
   margin-top: 0.3rem;
 }
 
+
+.btn-import {
+  background: var(--success-color);
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-import:hover {
+  background: var(--success-hover);
+  transform: translateY(-1px);
+}
