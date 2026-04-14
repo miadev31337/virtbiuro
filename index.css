@@ -621,3 +621,81 @@ input[type=number] {
   background: var(--success-hover);
   transform: translateY(-1px);
 }
+
+/* Wezwanie Column Styles */
+.cell-wezwanie {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.wezwanie-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 50px;
+}
+
+.wezwanie-file {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.wezwanie-icon {
+  color: var(--primary-color);
+  margin-bottom: 0.1rem;
+}
+
+.wezwanie-date {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-bottom: 0.2rem;
+}
+
+.wezwanie-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.btn-micro {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.btn-micro:hover {
+  background: var(--bg-color);
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-micro-danger:hover {
+  color: var(--danger-color);
+  border-color: var(--danger-color);
+}
+
+.btn-upload {
+  border: 1px dashed var(--border-color);
+  background: transparent;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+}
+
+.btn-upload:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: rgba(99, 102, 241, 0.05); /* var(--primary-color) with opacity */
+}

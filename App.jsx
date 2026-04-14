@@ -18,7 +18,8 @@ import {
   createUserWithEmailAndPassword,
   signOut
 } from 'firebase/auth';
-import { Plus, XCircle, LogOut, Pencil, RefreshCw, ArrowRight, Upload } from 'lucide-react';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { Plus, XCircle, LogOut, Pencil, RefreshCw, ArrowRight, Upload, FileText, Download, Trash2 } from 'lucide-react';
 import Papa from 'papaparse';
 import './index.css';
 
@@ -35,6 +36,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 const appId = "contract-manager-v1";
 
 const SHEETS = {
@@ -258,6 +260,59 @@ function App() {
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'contracts', id);
       await updateDoc(docRef, { statusKRS: newStatus });
     } catch (err) { console.error(err); }
+  };
+
+  const wezwanieInputRef = useRef(null);
+  const [uploadingWezwanieId, setUploadingWezwanieId] = useState(null);
+
+  const handleWezwanieUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file || !uploadingWezwanieId) return;
+
+    try {
+      const extension = file.name.split('.').pop();
+      const storagePath = `artifacts/${appId}/wezwania/${uploadingWezwanieId}_${Date.now()}.${extension}`;
+      const storageRef = ref(storage, storagePath);
+      
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'contracts', uploadingWezwanieId);
+      await updateDoc(docRef, {
+        wezwanie: {
+          url,
+          name: file.name,
+          path: storagePath,
+          uploadedAt: new Date().toISOString()
+        }
+      });
+      
+    } catch (err) {
+      console.error('Ошибка загрузки Wezwanie:', err);
+      alert('Ошибка при загрузке файла');
+    } finally {
+      if (wezwanieInputRef.current) wezwanieInputRef.current.value = '';
+      setUploadingWezwanieId(null);
+    }
+  };
+
+  const handleWezwanieDelete = async (contractId, wezwaniePath) => {
+    if (!window.confirm('Usunąć ten plik Wezwanie?')) return;
+    
+    try {
+      // Удаляем из Storage
+      if (wezwaniePath) {
+        const storageRef = ref(storage, wezwaniePath);
+        await deleteObject(storageRef).catch(e => console.warn('Файл уже удален в Storage', e));
+      }
+
+      // Очищаем в базе
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'contracts', contractId);
+      await updateDoc(docRef, { wezwanie: null });
+    } catch (err) {
+      console.error('Ошибка удаления Wezwanie:', err);
+      alert('Ошибка при удалении файла');
+    }
   };
 
   const handleExtend = async () => {
@@ -530,6 +585,12 @@ function App() {
             onChange={handleFileUpload} 
             style={{ display: 'none' }} 
           />
+          <input 
+            type="file" 
+            ref={wezwanieInputRef} 
+            onChange={handleWezwanieUpload} 
+            style={{ display: 'none' }} 
+          />
           <button onClick={() => fileInputRef.current?.click()} className="btn-import" title="Import CSV">
             <Upload size={18} /> {window.innerWidth > 600 ? 'Import' : ''}
           </button>
@@ -606,6 +667,7 @@ function App() {
                 <th>Status w KRS / CEIDG</th>
                 <th>Data wykreślenia</th>
                 <th>Po terminie</th>
+                <th style={{textAlign: 'center'}}>Wezwanie</th>
                 <th style={{textAlign: 'right'}}>Akcje</th>
               </tr>
             ) : (
@@ -682,6 +744,38 @@ function App() {
                       ) : (
                         <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}>-</div>
                       )}
+                    </td>
+
+                    <td className="cell-wezwanie" style={{verticalAlign: 'middle', textAlign: 'center'}}>
+                      <div className="wezwanie-container">
+                        {c.wezwanie ? (
+                          <div className="wezwanie-file">
+                            <FileText size={20} className="wezwanie-icon" />
+                            <div className="wezwanie-date">
+                              {c.wezwanie.uploadedAt ? new Date(c.wezwanie.uploadedAt).toLocaleDateString('ru-RU') : ''}
+                            </div>
+                            <div className="wezwanie-actions">
+                              <a href={c.wezwanie.url} target="_blank" rel="noopener noreferrer" className="btn-micro" title="Pobierz">
+                                <Download size={14} />
+                              </a>
+                              <button onClick={() => handleWezwanieDelete(c.id, c.wezwanie.path)} className="btn-micro btn-micro-danger" title="Usuń">
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button 
+                            className="btn-micro btn-upload" 
+                            title="Dodaj wezwanie"
+                            onClick={() => {
+                              setUploadingWezwanieId(c.id);
+                              wezwanieInputRef.current?.click();
+                            }}
+                          >
+                            <Upload size={16} />
+                          </button>
+                        )}
+                      </div>
                     </td>
 
                     <td style={{verticalAlign: 'middle'}}>
