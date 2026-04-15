@@ -117,6 +117,15 @@ const InfoPage = () => {
           </div>
         </div>
       </div>
+
+      <div className="info-section" style={{ marginTop: '2rem' }}>
+        <h3><span className="info-icon">🔍</span> 4. Filtry i Sortowanie</h3>
+        <ul>
+          <li style={{ marginBottom: '0.5rem' }}><strong>Swoja data (Start umowy):</strong> Pozwala filtrować umowy po dacie startu. Wpisując przedział "Od:" i "Do:", system pokaże umowy wyłącznie z tego zakresu. Jeśli wypełnisz tylko "Od:" — wyświetli umowy zawarte w tym dniu i nowsze.</li>
+          <li style={{ marginBottom: '0.5rem' }}><strong>Sortowanie po dacie (↓ / ↑):</strong> W sekcji BIEŻĄCE oraz ZAKOŃCZONE UMOWY możesz kliknąć w nagłówek "Daty" lub "Koniec". Spowoduje to posortowanie listy (od umów zawartych na najdłuższy termin w przyszłość, aż do najstarszych).</li>
+          <li style={{ marginBottom: '0.5rem' }}><strong>Licznik "Umowy: X":</strong> Umieszczony obok przycisku "Wyczyść filtry". Pokazuje on na żywo, ile umów bierze aktualnie udział w widoku (ile z nich jest widocznych po zastosowaniu obecnych filtrów).</li>
+        </ul>
+      </div>
     </div>
   );
 };
