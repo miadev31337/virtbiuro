@@ -50,30 +50,41 @@ const InfoPage = () => {
   return (
     <div className="info-page">
       <div className="info-header">
-        <h2 className="info-title">Jak działa system CRM?</h2>
+        <h2 className="info-title">Jak działa system?</h2>
         <p className="info-subtitle">Krótki poradnik jak zarządzać umowami i archiwum.</p>
       </div>
 
       <div className="info-section">
-        <h3><span className="info-icon">📑</span> 1. Podział na zakładки (Karty)</h3>
+        <h3><span className="info-icon">📑</span> 1. Karty</h3>
         <p>System dzieli umowy na trzy główne kategorie, aby ułatwić zarządzanie i kontrolowanie płatności:</p>
         
         <div className="info-card">
           <h4>OCZEKUJĄCE UMOWY</h4>
-          <p>Wszystkie nowo utworzone umowy trafiają tutaj. To jest "poczekalnia". Umowa czeka tutaj na odnotowanie wpłaty. Gdy klikniesz przycisk <strong>Opłata (TAK)</strong>, umowa automatycznie przeniesie się do aktywnych.</p>
+          <p>Wszystkie nowo utworzone umowy trafiają tutaj. To jest "poczekalnia". Umowy czekają tutaj na weryfikację, a po zatwierdzeniu przenosisz je ręcznie do aktywnych za pomocą strzałki.</p>
         </div>
 
         <div className="info-card">
           <h4>BIEŻĄCE UMOWY</h4>
           <p>Tutaj znajdują się wszystkie czynne i opłacone wynajmy. Mają one swój <strong>okres ważności</strong> (np. 12 miesięcy). Kiedy data zakończenia minie, system z samego rana o 00:00 automatycznie przeniesie umowę do Zakończonych.</p>
+          <ul>
+            <li><strong>Klient</strong> — Nazwa firmy. Po kliknięciu na nią, zawartość jest zamazana. Aby skopiować dane, wystarczy zaznaczyć tekst.</li>
+            <li><strong>Data Umowy</strong> — Kiedy została podpisana.</li>
+            <li><strong>Okres</strong> — Czas trwania najmu w miesiącach.</li>
+            <li><strong>Rozpoczęcie</strong> / <strong>Koniec</strong> — Data początku i końca okresu trwania umowy.</li>
+            <li><strong>Kwota</strong> — Całkowita opłata za wybrany okres.</li>
+          </ul>
         </div>
 
         <div className="info-card">
           <h4>ZAKOŃCZONE UMOWY (Archiwum i Długi)</h4>
           <p>Kiedy umowa się kończy, trafia do tej zakładki. Od pierwszego dnia po terminie ważności, <strong>system zaczyna automatycznie naliczać Karę (500 PLN za każdy dzień opóźnienia)</strong>.</p>
           <ul>
-            <li>Aby zatrzymać stoper kary, zmień status KRS / CEIDG na <strong>Nie</strong> (oznacza to, że firma wykreśliła dany adres z rejestru).</li>
-            <li>W tej zakładce widnieje nowa kolumna <strong>Wezwanie</strong> — kliknij ikonkę chmurki, aby przypiąć np. PDF z wezwaniem do zapłaty.</li>
+            <li><strong>Klient</strong> — Nazwa byłego klienta.</li>
+            <li><strong>Koniec</strong> — Kiedy ostatecznie zakończyła się umowa.</li>
+            <li><strong>Status w KRS / CEIDG</strong> — Domyślnie "Aktywny" po trafieniu tutaj. Jeżeli status to Aktywny — rośnie kara. Aby zatrzymać stoper kary, użyj przycisku Edycji (ołówek) i zmień status na <strong>Nie</strong> (wykreślono z adresu).</li>
+            <li><strong>Data wykreślenia</strong> — Informacyjna data dla celów archiwizacyjnych.</li>
+            <li><strong>Po terminie</strong> — Wskazuje ilość dni spóźnienia oraz wyliczoną w czasie rzeczywistym <strong>Kwotę Kary</strong>. Jeżeli zmienisz w KRS na "Nie" — ta kolumna zamieni się w kreskę i przestanie bić debet.</li>
+            <li><strong>Wezwanie</strong> — Komórka do zarządzania plikami i dowodami, że podjęto kroki prawne (np. wysłano prawnika). Szczegóły dodawania plików poniżej.</li>
           </ul>
         </div>
       </div>
@@ -90,19 +101,19 @@ const InfoPage = () => {
         <h3><span className="info-icon">🖱️</span> 3. Przyciski (Co robią?)</h3>
         <div className="info-action-list">
           <div className="info-action-item">
-            <span style={{color: '#8b5cf6'}}>Kopiuj 📋</span> — Kopiuje pełne dane klienta do schowka, gotowe do wklejenia.
+            <span style={{color: '#4f46e5', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold'}}><RefreshCw size={18} /> Przedłuż</span> Przedłuża umowę. Przesuwa datę Startu na następny dzień po starym Końcu i automatycznie wylicza nowy rok do przodu.
           </div>
           <div className="info-action-item">
-            <span style={{color: '#4f46e5'}}>Przedłuż 🔄</span> — Przedłuża umowę. Przesuwa datę Startu na następny dzień po starym Końcu i automatycznie wylicza nowy rok do przodu.
+            <span style={{color: '#059669', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold'}}><ArrowRight size={18} /> Przenieś</span> W Oczekujących: natychmiast wrzuca umowę w Bieżące umowy.
           </div>
           <div className="info-action-item">
-            <span style={{color: '#059669'}}>Przenieś ➔</span> — W <strong>Oczekujących</strong>: natychmiast wrzuca umowę w Bieżące bez patrzenia na filtry.
+            <span style={{color: 'var(--primary-color)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold'}}><Pencil size={18} /> Edytuj</span> Otwiera okno edycji kontrahenta.
           </div>
           <div className="info-action-item">
-            <span style={{color: 'var(--primary-color)'}}>Edytuj ✏️</span> — Otwiera okno edycji dowolnej wartości.
+            <span style={{color: 'var(--danger-color)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold'}}><XCircle size={18} /> Usuń</span> Trwałe usunięcie rekordu. (Uwaga: usuwa też przypięte pismo "Wezwanie" z serwera, jeśli było).
           </div>
           <div className="info-action-item">
-            <span style={{color: 'var(--danger-color)'}}>Usuń 🗑️</span> — Trwałe usunięcie rekordu. (Uwaga: usuwa też przypięte pismo "Wezwanie" z serwera, jeśli było).
+            <span style={{color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold'}}><Upload size={18} /> Dodaj Wezwanie</span> Załącza z dysku twardego plik wezwania do zapłaty (PDF/IMG). Po załączeniu pliku pokaże się ikona dokumentu z datą wysłania, oraz dodatkowe mikro-przyciski pobierania (<Download size={14} style={{display:'inline', verticalAlign:'middle'}}/>) i usuwania pliku z serwera (<Trash2 size={14} style={{display:'inline', verticalAlign:'middle'}}/>).
           </div>
         </div>
       </div>

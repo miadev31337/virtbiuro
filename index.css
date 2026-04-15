@@ -259,6 +259,21 @@ input {
   box-shadow: var(--shadow-sm);
 }
 
+.tab-info {
+  margin-left: auto;
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+.tab-info:hover {
+  background-color: #4338ca;
+  color: white;
+}
+.tab-info.active {
+  background-color: white;
+  color: var(--primary-color);
+}
+
 /* ================== Table ================== */
 .table-container {
   background: var(--surface-bg);
