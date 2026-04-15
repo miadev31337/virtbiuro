@@ -515,30 +515,41 @@ function App() {
 
       // Filter Start Date
       if (filterStart) {
-        let docStartDate = null;
+        const startDates = [];
         if (c.dataRozpoczecia || c.dateStart) {
-          docStartDate = new Date(c.dataRozpoczecia || c.dateStart);
+          startDates.push(new Date(c.dataRozpoczecia || c.dateStart).getTime());
+        }
+        // Если договор продлевался, его "новый" старт - это следующий день после оригинального окончания
+        if (c.dateEndExtended) {
+          const fallbackEnd = c.dateEnd || c.dataRozpoczecia || c.dateStart;
+          if (fallbackEnd) {
+            const extStart = new Date(fallbackEnd);
+            extStart.setDate(extStart.getDate() + 1);
+            startDates.push(extStart.getTime());
+          }
         }
 
-        if (docStartDate) {
-          const docTimestamp = docStartDate.getTime();
+        if (startDates.length > 0) {
           const now = new Date();
-          now.setHours(0, 0, 0, 0); // start of today
+          now.setHours(0, 0, 0, 0);
+          let matchFound = false;
 
           if (filterStart === '30') {
             const daysAgo = new Date(now);
             daysAgo.setDate(daysAgo.getDate() - 30);
-            if (docTimestamp < daysAgo.getTime()) return false;
+            matchFound = startDates.some(ts => ts >= daysAgo.getTime());
           } else if (filterStart === 'custom') {
-            if (filterStartCustomDate) {
-              const fromMs = new Date(filterStartCustomDate).getTime();
-              if (docTimestamp < fromMs) return false;
-            }
-            if (filterStartCustomDateTo) {
-              const toMs = new Date(filterStartCustomDateTo).getTime();
-              if (docTimestamp > toMs) return false;
-            }
+            const fromMs = filterStartCustomDate ? new Date(filterStartCustomDate).getTime() : null;
+            const toMs = filterStartCustomDateTo ? new Date(filterStartCustomDateTo).getTime() : null;
+
+            matchFound = startDates.some(ts => {
+              if (fromMs && ts < fromMs) return false;
+              if (toMs && ts > toMs) return false;
+              return true;
+            });
           }
+
+          if (!matchFound) return false;
         } else {
           return false;
         }
