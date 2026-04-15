@@ -263,21 +263,28 @@ function App() {
   };
 
   const wezwanieInputRef = useRef(null);
-  const [uploadingWezwanieId, setUploadingWezwanieId] = useState(null);
+  const uploadingWezwanieIdRef = useRef(null);
 
   const handleWezwanieUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file || !uploadingWezwanieId) return;
-
     try {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const targetId = uploadingWezwanieIdRef.current;
+      if (!targetId) {
+        alert("Ошибка: Не выбран договор!");
+        return;
+      }
+
       const extension = file.name.split('.').pop();
-      const storagePath = `artifacts/${appId}/wezwania/${uploadingWezwanieId}_${Date.now()}.${extension}`;
+      const storagePath = `artifacts/${appId}/wezwania/${targetId}_${Date.now()}.${extension}`;
       const storageRef = ref(storage, storagePath);
       
       await uploadBytes(storageRef, file);
+      
       const url = await getDownloadURL(storageRef);
 
-      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'contracts', uploadingWezwanieId);
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'contracts', targetId);
       await updateDoc(docRef, {
         wezwanie: {
           url,
@@ -289,10 +296,10 @@ function App() {
       
     } catch (err) {
       console.error('Ошибка загрузки Wezwanie:', err);
-      alert('Ошибка при загрузке файла');
+      alert('Ошибка при загрузке: ' + err.message);
     } finally {
       if (wezwanieInputRef.current) wezwanieInputRef.current.value = '';
-      setUploadingWezwanieId(null);
+      uploadingWezwanieIdRef.current = null;
     }
   };
 
@@ -768,7 +775,7 @@ function App() {
                             className="btn-micro btn-upload" 
                             title="Dodaj wezwanie"
                             onClick={() => {
-                              setUploadingWezwanieId(c.id);
+                              uploadingWezwanieIdRef.current = c.id;
                               wezwanieInputRef.current?.click();
                             }}
                           >
