@@ -54,7 +54,6 @@ function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
-  const [isRegistering, setIsRegistering] = useState(false);
 
   const [showAddModal, setShowAddModal] = useState(false);
   
@@ -119,11 +118,7 @@ function App() {
     setAuthError('');
     setLoading(true);
     try {
-      if (isRegistering) {
-        await createUserWithEmailAndPassword(auth, email, password);
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-      }
+      await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
       console.error("Firebase auth error:", err.code, err.message);
       setAuthError('Błąd logowania: ' + err.message);
@@ -562,10 +557,7 @@ function App() {
               onChange={e => setPassword(e.target.value)} 
             />
             <button type="submit" className="btn-primary">
-              {isRegistering ? 'Zarejestruj się' : 'Zaloguj się'}
-            </button>
-            <button type="button" onClick={() => setIsRegistering(!isRegistering)} className="btn-link">
-              {isRegistering ? 'Masz konto? Zaloguj się' : 'Nie masz konta? Utwórz'}
+              Zaloguj się
             </button>
           </form>
         </div>
