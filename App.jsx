@@ -147,6 +147,9 @@ function App() {
   const [filterPayment, setFilterPayment] = useState('');
   const [filterExtended, setFilterExtended] = useState('');
   const [sortDatesDir, setSortDatesDir] = useState('desc');
+  const [filterStart, setFilterStart] = useState('');
+  const [filterStartCustomDate, setFilterStartCustomDate] = useState('');
+  const [filterStartCustomDateTo, setFilterStartCustomDateTo] = useState('');
 
   const defaultNewContract = () => ({
     nazwa: '',
@@ -501,6 +504,37 @@ function App() {
         }
       }
 
+      // Filter Start Date
+      if (filterStart) {
+        let docStartDate = null;
+        if (c.dataRozpoczecia || c.dateStart) {
+          docStartDate = new Date(c.dataRozpoczecia || c.dateStart);
+        }
+
+        if (docStartDate) {
+          const docTimestamp = docStartDate.getTime();
+          const now = new Date();
+          now.setHours(0, 0, 0, 0); // start of today
+
+          if (filterStart === '30') {
+            const daysAgo = new Date(now);
+            daysAgo.setDate(daysAgo.getDate() - 30);
+            if (docTimestamp < daysAgo.getTime()) return false;
+          } else if (filterStart === 'custom') {
+            if (filterStartCustomDate) {
+              const fromMs = new Date(filterStartCustomDate).getTime();
+              if (docTimestamp < fromMs) return false;
+            }
+            if (filterStartCustomDateTo) {
+              const toMs = new Date(filterStartCustomDateTo).getTime();
+              if (docTimestamp > toMs) return false;
+            }
+          }
+        } else {
+          return false;
+        }
+      }
+
       return true;
     });
 
@@ -527,7 +561,7 @@ function App() {
       };
       return getTimestamp(b) - getTimestamp(a);
     });
-  }, [contracts, activeTab, filterAdded, filterCustomDate, filterPayment, filterExtended, sortDatesDir]);
+  }, [contracts, activeTab, filterAdded, filterCustomDate, filterPayment, filterExtended, sortDatesDir, filterStart, filterStartCustomDate, filterStartCustomDateTo]);
 
   const clearFilters = () => {
     setFilterAdded('');
@@ -535,6 +569,9 @@ function App() {
     setFilterPayment('');
     setFilterExtended('');
     setSortDatesDir('desc');
+    setFilterStart('');
+    setFilterStartCustomDate('');
+    setFilterStartCustomDateTo('');
   };
 
   const fileInputRef = useRef(null);
@@ -708,7 +745,7 @@ function App() {
       ) : (
         <>
           <div className="filters-bar">
-        <div className="filter-group">
+        {/* <div className="filter-group">
           <span className="filter-label">Ostatnio dodane:</span>
           <select className="filter-select" value={filterAdded} onChange={e => setFilterAdded(e.target.value)}>
             <option value="">Wszystkie</option>
@@ -723,6 +760,33 @@ function App() {
               value={filterCustomDate} 
               onChange={e => setFilterCustomDate(e.target.value)} 
             />
+          )}
+        </div> */}
+
+        <div className="filter-group">
+          <span className="filter-label">Start umowy:</span>
+          <select className="filter-select" value={filterStart} onChange={e => setFilterStart(e.target.value)}>
+            <option value="">Wszystkie</option>
+            <option value="30">Ostatnie 30 dni</option>
+            <option value="custom">Swoja data</option>
+          </select>
+          {filterStart === 'custom' && (
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <span className="filter-label" style={{marginLeft: '0.5rem', marginRight: '0.2rem'}}>Od:</span>
+              <input 
+                type="date" 
+                className="filter-select" 
+                value={filterStartCustomDate} 
+                onChange={e => setFilterStartCustomDate(e.target.value)} 
+              />
+              <span className="filter-label" style={{marginLeft: '0.5rem', marginRight: '0.2rem'}}>Do:</span>
+              <input 
+                type="date" 
+                className="filter-select" 
+                value={filterStartCustomDateTo} 
+                onChange={e => setFilterStartCustomDateTo(e.target.value)} 
+              />
+            </div>
           )}
         </div>
 
@@ -744,11 +808,14 @@ function App() {
           </select>
         </div>
 
-        {(filterAdded || filterPayment || filterExtended) && (
+        {(filterAdded || filterPayment || filterExtended || filterStart) && (
           <button onClick={clearFilters} className="btn-clear-filters">
             Wyczyść filtry
           </button>
         )}
+        <div style={{ marginLeft: 'auto', fontWeight: '700', fontSize: '1.1rem', color: 'var(--primary-color)', whiteSpace: 'nowrap' }}>
+          Umowy: {filteredData.length}
+        </div>
       </div>
 
       <div className="table-container">
