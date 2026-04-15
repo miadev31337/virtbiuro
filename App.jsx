@@ -159,6 +159,7 @@ function App() {
   const [filterStart, setFilterStart] = useState('');
   const [filterStartCustomDate, setFilterStartCustomDate] = useState('');
   const [filterStartCustomDateTo, setFilterStartCustomDateTo] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const defaultNewContract = () => ({
     nazwa: '',
@@ -555,6 +556,15 @@ function App() {
         }
       }
 
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const docNazwa = (c.nazwa || c.client || '').toLowerCase();
+        const docNip = (c.nip || '').toLowerCase();
+        if (!docNazwa.includes(query) && !docNip.includes(query)) {
+          return false;
+        }
+      }
+
       return true;
     });
 
@@ -581,7 +591,7 @@ function App() {
       };
       return getTimestamp(b) - getTimestamp(a);
     });
-  }, [contracts, activeTab, filterAdded, filterCustomDate, filterPayment, filterExtended, sortDatesDir, filterStart, filterStartCustomDate, filterStartCustomDateTo]);
+  }, [contracts, activeTab, filterAdded, filterCustomDate, filterPayment, filterExtended, sortDatesDir, filterStart, filterStartCustomDate, filterStartCustomDateTo, searchQuery]);
 
   const clearFilters = () => {
     setFilterAdded('');
@@ -592,6 +602,7 @@ function App() {
     setFilterStart('');
     setFilterStartCustomDate('');
     setFilterStartCustomDateTo('');
+    setSearchQuery('');
   };
 
   const fileInputRef = useRef(null);
@@ -790,6 +801,17 @@ function App() {
       ) : (
         <>
           <div className="filters-bar">
+            <div className="filter-group">
+              <span className="filter-label">Szukaj:</span>
+              <input 
+                type="text" 
+                className="filter-select" 
+                placeholder="Nazwa lub NIP..." 
+                value={searchQuery} 
+                onChange={e => setSearchQuery(e.target.value)} 
+                style={{ width: '180px' }}
+              />
+            </div>
         {/* <div className="filter-group">
           <span className="filter-label">Ostatnio dodane:</span>
           <select className="filter-select" value={filterAdded} onChange={e => setFilterAdded(e.target.value)}>
@@ -853,7 +875,7 @@ function App() {
           </select>
         </div>
 
-        {(filterAdded || filterPayment || filterExtended || filterStart) && (
+        {(filterAdded || filterPayment || filterExtended || filterStart || searchQuery) && (
           <button onClick={clearFilters} className="btn-clear-filters">
             Wyczyść filtry
           </button>
