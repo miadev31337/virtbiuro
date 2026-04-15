@@ -681,7 +681,7 @@ function App() {
           <button 
             key={name} 
             onClick={() => setActiveTab(name)} 
-            className={`tab-btn ${activeTab === name ? 'active' : ''}`}
+            className={`tab-btn ${activeTab === name ? 'active' : ''} ${name === SHEETS.INFO ? 'tab-info' : ''}`}
           >
             {name}
           </button>
