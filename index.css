@@ -699,3 +699,124 @@ input[type=number] {
   color: var(--primary-color);
   background: rgba(99, 102, 241, 0.05); /* var(--primary-color) with opacity */
 }
+
+/* Info Page Styles */
+.info-page {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: var(--surface-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  color: var(--text-color);
+  animation: fade-in 0.3s ease-out;
+}
+
+.info-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.info-title {
+  font-size: 2rem;
+  color: var(--primary-color);
+  margin-bottom: 0.5rem;
+}
+
+.info-subtitle {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+}
+
+.info-section {
+  margin-bottom: 2.5rem;
+}
+
+.info-section h3 {
+  font-size: 1.4rem;
+  color: var(--text-color);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 0.75rem;
+}
+
+.info-icon {
+  font-size: 1.6rem;
+}
+
+.info-section p {
+  line-height: 1.6;
+  margin-bottom: 1.25rem;
+  color: var(--text-secondary);
+}
+
+.info-card {
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.info-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--primary-color);
+}
+
+.info-card h4 {
+  color: var(--primary-color);
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.info-card p {
+  margin-bottom: 0;
+  font-size: 0.95rem;
+}
+
+.info-card ul {
+  margin-top: 0.75rem;
+  padding-left: 1.5rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.info-card ul li {
+  margin-bottom: 0.25rem;
+}
+
+.info-section > ul {
+  padding-left: 1.5rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.info-section > ul li {
+  margin-bottom: 0.75rem;
+}
+
+.info-action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.info-action-item {
+  background: var(--bg-color);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

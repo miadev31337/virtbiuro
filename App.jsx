@@ -42,7 +42,72 @@ const appId = "contract-manager-v1";
 const SHEETS = {
   PENDING: 'OCZEKUJĄCE UMOWY',
   NEW: 'BIEŻĄCE UMOWY',
-  EXPIRED: 'ZAKOŃCZONE UMOWY'
+  EXPIRED: 'ZAKOŃCZONE UMOWY',
+  INFO: 'INSTRUKCJA'
+};
+
+const InfoPage = () => {
+  return (
+    <div className="info-page">
+      <div className="info-header">
+        <h2 className="info-title">Jak działa system CRM?</h2>
+        <p className="info-subtitle">Krótki poradnik jak zarządzać umowami i archiwum.</p>
+      </div>
+
+      <div className="info-section">
+        <h3><span className="info-icon">📑</span> 1. Podział na zakładки (Karty)</h3>
+        <p>System dzieli umowy na trzy główne kategorie, aby ułatwić zarządzanie i kontrolowanie płatności:</p>
+        
+        <div className="info-card">
+          <h4>OCZEKUJĄCE UMOWY</h4>
+          <p>Wszystkie nowo utworzone umowy trafiają tutaj. To jest "poczekalnia". Umowa czeka tutaj na odnotowanie wpłaty. Gdy klikniesz przycisk <strong>Opłata (TAK)</strong>, umowa automatycznie przeniesie się do aktywnych.</p>
+        </div>
+
+        <div className="info-card">
+          <h4>BIEŻĄCE UMOWY</h4>
+          <p>Tutaj znajdują się wszystkie czynne i opłacone wynajmy. Mają one swój <strong>okres ważności</strong> (np. 12 miesięcy). Kiedy data zakończenia minie, system z samego rana o 00:00 automatycznie przeniesie umowę do Zakończonych.</p>
+        </div>
+
+        <div className="info-card">
+          <h4>ZAKOŃCZONE UMOWY (Archiwum i Długi)</h4>
+          <p>Kiedy umowa się kończy, trafia do tej zakładki. Od pierwszego dnia po terminie ważności, <strong>system zaczyna automatycznie naliczać Karę (500 PLN za każdy dzień opóźnienia)</strong>.</p>
+          <ul>
+            <li>Aby zatrzymać stoper kary, zmień status KRS / CEIDG na <strong>Nie</strong> (oznacza to, że firma wykreśliła dany adres z rejestru).</li>
+            <li>W tej zakładce widnieje nowa kolumna <strong>Wezwanie</strong> — kliknij ikonkę chmurki, aby przypiąć np. PDF z wezwaniem do zapłaty.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div className="info-section">
+        <h3><span className="info-icon">🧮</span> 2. Matematyka systemu</h3>
+        <ul>
+          <li><strong>Reguła "-1 dzień":</strong> Kiedy wyznaczasz umowę (np. Start to 25 stycznia, Okres: 12 miesięcy), system wyliczy datę końca na <strong>24 stycznia</strong> następnego roku. Dzięki temu umowy nie "nakładają się" na siebie w tych samych dniach przy przedłużaniu.</li>
+          <li><strong>Obliczenie Kwoty:</strong> System automatycznie przyjmuje, że miesiąc kosztuje 50 PLN. Więc jeśli dodasz umowę na 12 miesięcy, kwota od razu ustawi się na 600 PLN (można to potem nadpisać).</li>
+        </ul>
+      </div>
+
+      <div className="info-section">
+        <h3><span className="info-icon">🖱️</span> 3. Przyciski (Co robią?)</h3>
+        <div className="info-action-list">
+          <div className="info-action-item">
+            <span style={{color: '#8b5cf6'}}>Kopiuj 📋</span> — Kopiuje pełne dane klienta do schowka, gotowe do wklejenia.
+          </div>
+          <div className="info-action-item">
+            <span style={{color: '#4f46e5'}}>Przedłuż 🔄</span> — Przedłuża umowę. Przesuwa datę Startu na następny dzień po starym Końcu i automatycznie wylicza nowy rok do przodu.
+          </div>
+          <div className="info-action-item">
+            <span style={{color: '#059669'}}>Przenieś ➔</span> — W <strong>Oczekujących</strong>: natychmiast wrzuca umowę w Bieżące bez patrzenia na filtry.
+          </div>
+          <div className="info-action-item">
+            <span style={{color: 'var(--primary-color)'}}>Edytuj ✏️</span> — Otwiera okno edycji dowolnej wartości.
+          </div>
+          <div className="info-action-item">
+            <span style={{color: 'var(--danger-color)'}}>Usuń 🗑️</span> — Trwałe usunięcie rekordu. (Uwaga: usuwa też przypięte pismo "Wezwanie" z serwera, jeśli było).
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 function App() {
@@ -612,7 +677,11 @@ function App() {
         ))}
       </nav>
 
-      <div className="filters-bar">
+      {activeTab === SHEETS.INFO ? (
+        <InfoPage />
+      ) : (
+        <>
+          <div className="filters-bar">
         <div className="filter-group">
           <span className="filter-label">Ostatnio dodane:</span>
           <select className="filter-select" value={filterAdded} onChange={e => setFilterAdded(e.target.value)}>
@@ -884,6 +953,8 @@ function App() {
             Następna
           </button>
         </div>
+      )}
+      </>
       )}
 
       {editingContract && (() => {
