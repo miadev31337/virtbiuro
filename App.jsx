@@ -667,6 +667,27 @@ function App() {
     });
   };
 
+  const handleClearDatabase = async () => {
+    if (!window.confirm("UWAGA! Czy na pewno chcesz usunąć WSZYSTKIE umowy z bazy? Ta operacja jest NIEODWRACALNA!")) return;
+    if (!window.confirm("Ostatnie ostrzeżenie! POTWIERDZASZ usunięcie wszystkich rekordów z tabeli?")) return;
+
+    setLoading(true);
+    let deletedCount = 0;
+    try {
+      for (const contract of contracts) {
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'contracts', contract.id);
+        await deleteDoc(docRef);
+        deletedCount++;
+      }
+      alert(`Pomyślnie usunięto ${deletedCount} umów.`);
+    } catch (err) {
+      console.error(err);
+      alert('Błąd podczas usuwania bazy: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 50;
@@ -740,6 +761,10 @@ function App() {
           />
           <button onClick={() => fileInputRef.current?.click()} className="btn-import" title="Import CSV">
             <Upload size={18} /> {window.innerWidth > 600 ? 'Import' : ''}
+          </button>
+
+          <button onClick={handleClearDatabase} className="btn-logout" title="Wyczyść bazę" style={{ color: 'var(--danger-color)' }}>
+            <Trash2 size={18} />
           </button>
 
           <button onClick={openAddModal} className="btn-add">
