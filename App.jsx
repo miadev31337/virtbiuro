@@ -146,6 +146,7 @@ function App() {
   const [filterCustomDate, setFilterCustomDate] = useState('');
   const [filterPayment, setFilterPayment] = useState('');
   const [filterExtended, setFilterExtended] = useState('');
+  const [sortDatesDir, setSortDatesDir] = useState('desc');
 
   const defaultNewContract = () => ({
     nazwa: '',
@@ -505,6 +506,19 @@ function App() {
 
     // Сортировка (новые сверху)
     return data.sort((a, b) => {
+      // Сортировка по дате окончания (для BIEŻĄCE UMOWY и ZAKOŃCZONE UMOWY)
+      if ((activeTab === SHEETS.NEW || activeTab === SHEETS.EXPIRED) && sortDatesDir) {
+        const getEndTimestamp = (doc) => {
+          const actualKoniec = doc.dateEndExtended || doc.dateEnd;
+          if (!actualKoniec) return 0;
+          return new Date(actualKoniec).getTime();
+        };
+        const timeA = getEndTimestamp(a);
+        const timeB = getEndTimestamp(b);
+        return sortDatesDir === 'desc' ? timeB - timeA : timeA - timeB;
+      }
+
+      // Значение по умолчанию
       const getTimestamp = (doc) => {
         if (doc.createdAt && doc.createdAt.toMillis) return doc.createdAt.toMillis();
         if (doc.createdAt) return new Date(doc.createdAt).getTime();
@@ -513,13 +527,14 @@ function App() {
       };
       return getTimestamp(b) - getTimestamp(a);
     });
-  }, [contracts, activeTab, filterAdded, filterCustomDate, filterPayment, filterExtended]);
+  }, [contracts, activeTab, filterAdded, filterCustomDate, filterPayment, filterExtended, sortDatesDir]);
 
   const clearFilters = () => {
     setFilterAdded('');
     setFilterCustomDate('');
     setFilterPayment('');
     setFilterExtended('');
+    setSortDatesDir('desc');
   };
 
   const fileInputRef = useRef(null);
@@ -742,7 +757,16 @@ function App() {
             {activeTab === SHEETS.EXPIRED ? (
               <tr>
                 <th>Klient</th>
-                <th>Koniec</th>
+                <th 
+                  style={{cursor: 'pointer', userSelect: 'none'}} 
+                  onClick={() => {
+                    if (sortDatesDir === 'desc') setSortDatesDir('asc');
+                    else setSortDatesDir('desc'); // toggle between asc and desc
+                  }}
+                  title="Kliknij, aby posortować"
+                >
+                  Koniec {sortDatesDir === 'desc' ? '↓' : '↑'}
+                </th>
                 <th>Status w KRS / CEIDG</th>
                 <th>Data wykreślenia</th>
                 <th>Po terminie</th>
@@ -752,7 +776,20 @@ function App() {
             ) : (
               <tr>
                 <th>Klient</th>
-                <th>Daty</th>
+                {activeTab === SHEETS.NEW ? (
+                  <th 
+                    style={{cursor: 'pointer', userSelect: 'none'}} 
+                    onClick={() => {
+                      if (sortDatesDir === 'desc') setSortDatesDir('asc');
+                      else setSortDatesDir('desc'); // toggle between asc and desc, always sort on this tab
+                    }}
+                    title="Kliknij, aby posortować"
+                  >
+                    Daty {sortDatesDir === 'desc' ? '↓' : '↑'}
+                  </th>
+                ) : (
+                  <th>Daty</th>
+                )}
                 {activeTab !== SHEETS.EXPIRED && <th>Manager</th>}
                 <th style={{textAlign: 'right'}}>Kwota</th>
                 {activeTab !== SHEETS.PENDING && <th style={{textAlign: 'center'}}>Opłata</th>}
